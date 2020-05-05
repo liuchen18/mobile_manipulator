@@ -4,6 +4,7 @@ work:
 rewrite the robot_description's ceshi.cpp, which can subscribe odom and manipulator controller state,and then use the control strategy
 add connection between mobile_manipulator'base_move.py and robot_description's ceshi.cpp
 got end effector's state in txt file and plot the data
+add 1st edition dwa algorithm
 
 problems:
 the velocity of the base changes suddenly,which may cause the error of the end effector
