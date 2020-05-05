@@ -1,0 +1,7 @@
+<?xml version='1.0'?>
+<launch>
+    <arg name="write_type" default="write"/>
+    <arg name="move_type" default="controlled"/>
+    <node name="robot_state" pkg="manipulator_moveit_config" type="manipulator_state.py" output="screen" args="$(arg move_type) $(arg write_type)"/>
+
+</launch>

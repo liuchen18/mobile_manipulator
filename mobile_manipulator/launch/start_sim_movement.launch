@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+     <node name="manipulator_control" type="ceshi" pkg="robot_description" output="screen"/>
+     <node name="move_base" type="base_move.py" pkg="mobile_manipulator"/>
+
+</launch>

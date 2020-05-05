@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+      <arg name="stop_base" default="false"/>
+    <!--start mobile manipulator sim env and moveit-->
+    <include file="$(find manipulator_moveit_config)/launch/manipulator_gazebo.launch">
+        <arg name="stop_base" value="$(arg stop_base)"/>
+    </include>
+
+</launch>
+

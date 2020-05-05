@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="control_type" default="desired"/>
+
+    <node name="sub_robot_state" pkg="mobile_base" type="sub_robot_state.py" output="screen"/>
+
+    <node name="generate_vel_com" pkg="mobile_base" type="generate_vel_com.py" output="screen" args="$(arg control_type)" />
+
+</launch>

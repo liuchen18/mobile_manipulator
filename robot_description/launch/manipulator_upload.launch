@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="limited" default="false" doc="If true, limits joint range [-PI, PI] on all joints." />
+  <arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface" />
+  <arg name="stop_base" default="true"/>
+  
+
+  <param if="$(arg stop_base)" name="robot_description" command="$(find xacro)/xacro --inorder '$(find robot_description)/urdf/manipulator.urdf.xacro' transmission_hw_interface:=$(arg transmission_hw_interface)" />
+  <param unless="$(arg stop_base)" name="robot_description" command="$(find xacro)/xacro --inorder '$(find robot_description)/urdf/mobile_manipulator.urdf.xacro' transmission_hw_interface:=$(arg transmission_hw_interface)" />
+
+</launch>

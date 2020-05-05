@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro"
+       name="mm" >
+  <xacro:property name="ns" value="$(arg ns)/" />
+  <!-- ur10 -->
+   <xacro:arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface"/>
+  <xacro:include filename="$(find robot_description)/urdf/mm_ns.xacro" />
+
+  <!-- arm -->
+  <xacro:ur10_robot prefix="${ns}" joint_limited="false"
+  transmission_hw_interface="$(arg transmission_hw_interface)"/>
+
+
+  <!--link name="world"/>
+
+  <joint name="fixed" type="fixed">
+    <parent link="world"/>
+    <child link="${ns}fixed_link"/>
+  </joint-->
+
+  
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/mm</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+
+    <!--move_base plugin -->
+    <plugin name="base_controller" filename="libgazebo_ros_planar_move.so">
+      <commandTopic>/mm/cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <odometryRate>20.0</odometryRate>
+      <robotBaseFrame>base_link</robotBaseFrame>
+    </plugin>
+  </gazebo>
+ 
+</robot>

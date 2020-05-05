@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>robot_description</name>
+  <version>0.0.0</version>
+  <description>The robot_description package to describe the mobile manipulator</description>
+
+  <maintainer email="g.a.vanderhoorn@tudelft.nl">G.A. vd. Hoorn</maintainer>
+  <maintainer email="miguel.prada@tecnalia.com">Miguel Prada Sarasola</maintainer>
+  <maintainer email="nhg@ipa.fhg.de">Nadia Hammoudeh Garcia</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/ur_description</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>moveit_msgs</build_depend>
+  <build_depend>control_msgs</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>moveit_msgs</build_export_depend>
+  <build_export_depend>control_msgs</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <build_depend>moveit_core</build_depend>
+  <build_export_depend>moveit_core</build_export_depend>
+  <exec_depend>moveit_core</exec_depend>
+  <build_depend>moveit_ros_planning_interface</build_depend>
+  <build_export_depend>moveit_ros_planning_interface</build_export_depend>
+  <exec_depend>moveit_ros_planning_interface</exec_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_export_depend>nav_msgs</build_export_depend>
+  <exec_depend>nav_msgs</exec_depend>
+
+  <export>
+  </export>
+</package>

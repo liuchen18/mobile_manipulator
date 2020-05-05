@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="gazebo_gui" default="true"/>
+  <arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface" />
+  <arg name="stop_base" default="true"/> <!--true means the mobile base can not move-->
+  
+  <include file="$(find robot_description)/launch/manipulator_upload.launch">
+    <arg name="transmission_hw_interface" value="$(arg transmission_hw_interface)"/>
+    <arg name="stop_base" value="$(arg stop_base)"/>
+  </include>
+
+
+  <!-- startup simulated world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" default="worlds/empty.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gazebo_gui)"/>
+  </include>
+  <node pkg="robot_state_publisher" type="robot_state_publisher"  name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="30.0" />
+  </node>
+  <!-- send robot urdf to param server -->
+  <!--<param name="robot_description" textfile="$(arg urdf_path)" /-->
+
+  <!-- push robot_description to factory and spawn robot in gazebo at the origin, change x,y,z arguments to spawn in a different position -->
+  <node name="spawn_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model robot -x 0 -y 0 -z 0"
+    respawn="false" output="screen" >
+  </node>
+
+  <include file="$(find robot_description)/launch/ros_controllers.launch"/>
+
+  <!--run move_group node-->
+    <include file="$(find manipulator_moveit_config)/launch/move_group.launch"/>
+
+</launch>
+

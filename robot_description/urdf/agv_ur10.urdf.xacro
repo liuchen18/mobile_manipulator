@@ -1,0 +1,22 @@
+<?xml version="1.0"?> 
+  <robot xmlns:xacro="http://www.ros.org/wiki/xacro" > 
+  <!-- common stuff --> 
+  <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" /> 
+  <!-- ur10 --> 
+  <xacro:include filename="$(find ur_description)/urdf/ur10.urdf.xacro" /> 
+  <!-- barrett hand -->
+  <xacro:include filename="$(find bhand_description)/urdf/agv.urdf.xacro" /> 
+  <!-- arm -->
+  <xacro:ur10_robot prefix="" joint_limited="true"/> 
+  <link name="world" /> 
+  <joint name="world_joint" type="fixed">
+  <parent link="world" /> 
+  <child link = "base_link" /> 
+  <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" /> 
+  </joint> 
+  <!-- end effector --> 
+  <xacro:bhand_macro parent="ee_link" name="bh"> 
+  <origin xyz="0.012 0.0 0.0" rpy="${pi/2.0} ${pi/2.0} ${pi/2.0}"/> 
+  </xacro:bhand_macro>
+</robot>
+

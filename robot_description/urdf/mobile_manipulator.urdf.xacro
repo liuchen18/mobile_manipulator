@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro"
+       name="ur10" >
+
+  <xacro:arg name="transmission_hw_interface" default="hardware_interface/VelocityJointInterface"/>
+
+  <!-- common stuff -->
+  <xacro:include filename="$(find robot_description)/urdf/common_move_base.gazebo.xacro" />
+
+  <!-- ur10 -->
+  <xacro:include filename="$(find robot_description)/urdf/ur10.urdf.xacro" />
+
+  <!-- arm -->
+  <xacro:ur10_robot prefix="" joint_limited="false"
+    transmission_hw_interface="$(arg transmission_hw_interface)"
+  />
+ 
+</robot>
