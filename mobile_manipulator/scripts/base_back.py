@@ -4,6 +4,18 @@ from geometry_msgs.msg import Twist
 from gazebo_msgs.srv import *
 import math
 from gazebo_msgs.msg import ModelState
+from geometry_msgs.msg import Pose
+
+def euler_to_quaternion(R,P,Y):
+    '''
+    transfor the given ruler angle to orientation ,return orientation
+    '''
+    p=Pose()
+    p.orientation.w=math.cos(R/2)*math.cos(P/2)*math.cos(Y/2)+math.sin(R/2)*math.sin(P/2)*math.sin(Y/2)
+    p.orientation.x=math.sin(R/2)*math.cos(P/2)*math.cos(Y/2)-math.cos(R/2)*math.sin(P/2)*math.sin(Y/2)
+    p.orientation.y=math.cos(R/2)*math.sin(P/2)*math.cos(Y/2)+math.sin(R/2)*math.cos(P/2)*math.sin(Y/2)
+    p.orientation.z=math.cos(R/2)*math.cos(P/2)*math.sin(Y/2)-math.sin(R/2)*math.sin(P/2)*math.cos(Y/2)
+    return p.orientation
 
 rospy.init_node('init_node')
 cmd_pub=rospy.Publisher('cmd_vel',Twist,queue_size=10)
@@ -30,7 +42,7 @@ desired_state.model_name='robot'
 desired_state.pose=robot_state.pose
 desired_state.pose.position.x = desired_position[0]
 desired_state.pose.position.y = desired_position[1]
-desired_state.pose.orientation.z = desired_position[2]
+desired_state.pose.orientation=euler_to_quaternion(0,0,0)
 set_state_service(desired_state)
 
 model = GetModelStateRequest()

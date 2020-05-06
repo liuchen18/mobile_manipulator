@@ -1,5 +1,8 @@
-#define DEBUG
+//#define DEBUG_CONTROL
+#define DEBUG_TIME
 //#define SHOW_BASE_STATE
+//#define DEBUG
+//#define DEBUG_POSITION_ERROR
 #include "ros/ros.h"
 #include <Eigen/Dense>
 #include "control_msgs/FollowJointTrajectoryAction.h"
@@ -16,6 +19,7 @@
 #include "std_msgs/Bool.h"
 #include <iostream>
 #include <fstream>
+#include "math.h"
 
 class manipulator_state{
     public:
@@ -43,7 +47,7 @@ class trajectory{
 geometry_msgs::Pose trajectory::desired_trajectory_pose(double time){
     geometry_msgs::Pose d_pose;
     d_pose.position.x=0.2;
-    d_pose.position.y=0.1*time + 0.3;
+    d_pose.position.y=0.2*time + 0.3;
     d_pose.position.z=1.0;
     d_pose.orientation.x=0.707;
     d_pose.orientation.y=0.0;
@@ -54,7 +58,7 @@ geometry_msgs::Pose trajectory::desired_trajectory_pose(double time){
 std::vector<double> trajectory::desired_trajectory_velocity(double time){
     std::vector<double> vel;
     vel.push_back(0);
-    vel.push_back(0.1);
+    vel.push_back(0.2);
     vel.push_back(0);
     vel.push_back(0);
     vel.push_back(0);
@@ -80,16 +84,34 @@ void base_state::base_Callback(const nav_msgs::Odometry& msg){
     base_position[1]=msg.pose.pose.position.y;
     Eigen::Quaterniond cur_q(msg.pose.pose.orientation.w,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z);
     Eigen::Vector3d rpy=cur_q.matrix().eulerAngles(2,1,0);
-    base_position[2]=rpy[0]-3.14;
+    int i=0;
+    while(1){
+        rpy[0]+=i*M_PI;
+        if(abs(base_position[2]-rpy[0])<1){
+            base_position[2]=rpy[0];
+            break;
+        }
+        rpy[0]-=2*i*M_PI;
+        if(abs(base_position[2]-rpy[0])<1){
+            base_position[2]=rpy[0];
+            break;
+        }
+        rpy[0]+=i*M_PI;
+        i+=1;
+    }
     #ifdef SHOW_BASE_STATE
+        ROS_INFO("quaternion: w: %f, x: %f, y: %f, z: %f",msg.pose.pose.orientation.w,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z);
         ROS_INFO("current base vel: vel_x: %f, vel_y: %f, vel_theta: %f",base_vel[0],base_vel[1],base_vel[2]);
         ROS_INFO("current base position: position_x: %f, position_y: %f, position_theta: %f",base_position[0],base_position[1],base_position[2]);
     #endif
 }
 
 /* compute joint velocity, according to desired cartisian velocity, current pose. desired pose and jacobian matrix*/
-std::vector<double> compute_joint_velocity(const std::vector<double>& desired_cartisian_vel,const geometry_msgs::Pose& current_cartisian_pose,const geometry_msgs::Pose& desired_cartisian_pose,const Eigen::MatrixXd& jacobian){
-    double K[6]={5,5,5,1,1,1};
+std::vector<double> compute_joint_velocity(const std::vector<double>& desired_cartisian_vel,
+                                            const geometry_msgs::Pose& current_cartisian_pose,
+                                            const geometry_msgs::Pose& desired_cartisian_pose,
+                                            const Eigen::MatrixXd& jacobian){
+    double K[6]={1,1,1,1,1,1};
 
     //generate error
     Eigen::Vector3d position_error;
@@ -99,7 +121,14 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
     Eigen::Vector3d qc(current_cartisian_pose.orientation.x, current_cartisian_pose.orientation.y, current_cartisian_pose.orientation.z);
     Eigen::Vector3d qd(desired_cartisian_pose.orientation.x, desired_cartisian_pose.orientation.y, desired_cartisian_pose.orientation.z);
     Eigen::Vector3d orientation_error = current_cartisian_pose.orientation.w*qd-desired_cartisian_pose.orientation.w*qc+qc.cross(qd);
-    #ifdef DEBUG
+
+    #ifdef DEBUG_POSITION_ERROR
+        ROS_INFO("position x error: %f ",position_error[0]);
+        ROS_INFO("desired x: %f, actual x: %f",desired_cartisian_pose.position.x,current_cartisian_pose.position.x);
+    #endif
+    
+    #ifdef DEBUG_CONTROL
+        ROS_INFO("desired cartisian velocity: %f, %f, %f, %f, %f, %f",desired_cartisian_vel[0],desired_cartisian_vel[1],desired_cartisian_vel[2],desired_cartisian_vel[4],desired_cartisian_vel[4],desired_cartisian_vel[5]);
         ROS_INFO("POSITION ERROR: %f, %f, %f",position_error[0],position_error[1],position_error[2]);
         ROS_INFO("orientation error: %f, %f, %f",orientation_error[0],orientation_error[1],orientation_error[2]);
         ROS_INFO("det of the jacobian: %f",jacobian.determinant());
@@ -121,7 +150,7 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
     for(int i=0;i<6;i++){
         joint_velocity.push_back(velocity[i]);
     }
-    #ifdef DEBUG
+    #ifdef DEBUG_CONTROL
         ROS_INFO("cartisian velocity: %f, %f, %f, %f, %f, %f",cartisian_velocity(0,0),cartisian_velocity(1,0),cartisian_velocity(2,0),cartisian_velocity(3,0),cartisian_velocity(4,0),cartisian_velocity(5,0));
         ROS_INFO("joint velocity: %f, %f, %f, %f, %f, %f",joint_velocity[0],joint_velocity[1],joint_velocity[2],joint_velocity[3],joint_velocity[4],joint_velocity[5]);
     #endif
@@ -129,19 +158,44 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
     
 }
 
-std::vector<double> compute_desired_manipulator_cartisian_velocity(const std::vector<double> desired_mm_cartiian_velocity,const std::vector<double> current_base_velocity){
+std::vector<double> compute_desired_manipulator_cartisian_velocity(const geometry_msgs::Pose current_end_effector_pose,
+                                                                    const std::vector<double> current_base_position,
+                                                                    const std::vector<double> desired_mm_cartiian_velocity,
+                                                                    const std::vector<double> current_base_velocity){
     std::vector<double> desired_manipulator_cartisian_velocity(desired_mm_cartiian_velocity);
-    desired_manipulator_cartisian_velocity[0]-=current_base_velocity[0];
-    desired_manipulator_cartisian_velocity[1]-=current_base_velocity[1];
-    desired_manipulator_cartisian_velocity[5]-=current_base_velocity[3];
+    double R=sqrt(current_end_effector_pose.position.x*current_end_effector_pose.position.x+current_end_effector_pose.position.y*current_end_effector_pose.position.y);
+    double alpha = atan2(current_end_effector_pose.position.y,current_end_effector_pose.position.x);
+    double theta = current_base_position[2];
+    desired_manipulator_cartisian_velocity[0]-=(current_base_velocity[0]-current_base_velocity[2]*R*sin(alpha+theta));
+    desired_manipulator_cartisian_velocity[1]-=(current_base_velocity[1]+current_base_velocity[2]*R*cos(alpha+theta));
+    desired_manipulator_cartisian_velocity[5]-=current_base_velocity[2];
+    #ifdef DEBUG_VEL
+        ROS_INFO("mm cartisian velocity: X: %f, Y: %f, theta: %f",desired_mm_cartiian_velocity[0],desired_mm_cartiian_velocity[1],desired_mm_cartiian_velocity[5]);
+        ROS_INFO("current base velocity: X: %f, Y: %f, theta: %f",current_base_velocity[0],current_base_velocity[1],current_base_velocity[2]);
+        ROS_INFO("manipulator cartisian velocity: X: %f, Y: %f, theta: %f",desired_manipulator_cartisian_velocity[0],desired_manipulator_cartisian_velocity[1],desired_manipulator_cartisian_velocity[5]);
+    #endif
     return desired_manipulator_cartisian_velocity;
 }
 
 geometry_msgs::Pose compute_desired_manipulator_end_pose(geometry_msgs::Pose desired_mm_pose,const std::vector<double> current_base_position){
     geometry_msgs::Pose desired_mani_end_pose;
-    desired_mani_end_pose.position.x=desired_mm_pose.position.x-current_base_position[0];
-    desired_mani_end_pose.position.y=desired_mm_pose.position.y-current_base_position[1];
+    double cartisian_x=desired_mm_pose.position.x-current_base_position[0];
+    double cartisian_y=desired_mm_pose.position.y-current_base_position[1];
     desired_mani_end_pose.position.z=desired_mm_pose.position.z;
+
+    double alpha=atan2(cartisian_y,cartisian_x);
+    double length=sqrt(cartisian_y*cartisian_y+cartisian_x*cartisian_x);
+    desired_mani_end_pose.position.x=length*cos(alpha-current_base_position[2]);
+    desired_mani_end_pose.position.y=length*sin(alpha-current_base_position[2]);
+
+    #ifdef DEBUG_POSITION_ERROR
+        ROS_INFO("desired mm x: %f, actual base x: %f",desired_mm_pose.position.x,current_base_position[0]);
+        ROS_INFO("cartisian_x: %f, cartisian_y: %f",cartisian_x,cartisian_y);
+        ROS_INFO("current theta: %f",current_base_position[2]);
+        ROS_INFO("desired mani x: %f",desired_mani_end_pose.position.x);
+    #endif
+
+
     Eigen::Quaterniond mm_q(desired_mm_pose.orientation.w,desired_mm_pose.orientation.x,desired_mm_pose.orientation.y,desired_mm_pose.orientation.z);
     Eigen::Vector3d mm_rpy=mm_q.matrix().eulerAngles(2,1,0);
     mm_rpy[0]-=current_base_position[2];
@@ -321,6 +375,7 @@ int main(int argc, char** argv){
         std_msgs::Bool start_base;
         start_base.data=true;
         start_base_pub.publish(start_base);
+
         //forward kinematics
         std::vector<double> joint_v(current_manipulator_state.current_joint_values,current_manipulator_state.current_joint_values+6);
         //double v[6]={0,-0.5,-0.5,0,0,1};
@@ -347,18 +402,24 @@ int main(int argc, char** argv){
         geometry_msgs::Pose desired_mm_end_effector_pose=tra.desired_trajectory_pose(ros::Time::now().toSec()-start_time);
         std::vector<double> desired_mm_cartisian_velocity=tra.desired_trajectory_velocity(ros::Time::now().toSec()-start_time);
 
-        std::vector<double> desired_manipulator_cartisian_velocity=compute_desired_manipulator_cartisian_velocity(desired_mm_cartisian_velocity,current_base_state.base_vel);
+        std::vector<double> desired_manipulator_cartisian_velocity=compute_desired_manipulator_cartisian_velocity(current_end_effector_pose,
+                                                                                                                    current_base_state.base_position,
+                                                                                                                    desired_mm_cartisian_velocity,
+                                                                                                                    current_base_state.base_vel);
         geometry_msgs::Pose desired_manipulator_end_pose=compute_desired_manipulator_end_pose(desired_mm_end_effector_pose,current_base_state.base_position);
         //compute next joint velocity
-        std::vector<double> joint_velocity=compute_joint_velocity(desired_manipulator_cartisian_velocity,current_end_effector_pose,desired_manipulator_end_pose,jacobian);
+        std::vector<double> joint_velocity=compute_joint_velocity(desired_manipulator_cartisian_velocity,
+                                                                    current_end_effector_pose,
+                                                                    desired_manipulator_end_pose,
+                                                                    jacobian);
 
         //compute next joint position
         std::vector<double> next_joint_position=compute_next_joint_position(current_manipulator_state.current_joint_values,joint_velocity);
 
         //send current action goal
         manipulator_send_goal(action_client,next_joint_position);
-        #ifdef DEBUG
-            ROS_INFO("time duration: %f",ros::Time::now().toSec()-start_time);
+        #ifdef DEBUG_TIME
+            ROS_INFO("current time : %f",ros::Time::now().toSec()-start_time);
         #endif
         ros::spinOnce();
         loop_rate.sleep();

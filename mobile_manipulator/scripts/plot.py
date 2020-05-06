@@ -46,5 +46,57 @@ def plot_fig():
     
     plt.show()
 
+
+def plot_base():
+    t_d=[]
+    position_x_d=[]
+    position_y_d=[]
+    position_z_d=[]
+    t_a=[]
+    position_x_a=[]
+    position_y_a=[]
+    position_z_a=[]
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory.txt','r') as f:
+        for line in f.readlines()[1:-1]:
+            data=list(map(float,line.split(' ')))
+            position_x_d.append(data[0])
+            position_y_d.append(data[1])
+            position_z_d.append(data[2])
+            t_d.append(data[4])
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt','r') as f:
+        for line in f.readlines()[1:]:
+            data=list(map(float,line.split(' ')))
+            position_x_a.append(data[0])
+            position_y_a.append(data[1])
+            position_z_a.append(data[2])
+            t_a.append(data[3])
+    plt.figure(12)
+    plt.subplot(3,1,1)
+    plt.plot(t_d,position_x_d,label='desired x position')
+    plt.plot(t_a,position_x_a,label='actual x position')
+    plt.title('x distance')
+    plt.xlabel('time')
+    plt.ylabel('distance')
+    plt.legend(loc='upper left')
+
+    plt.subplot(3,1,2)
+    plt.plot(t_d,position_y_d,label='desired y position')
+    plt.plot(t_a,position_y_a,label='actual y position')
+    plt.title('y distance')
+    plt.xlabel('time')
+    plt.ylabel('distance')
+    plt.legend(loc='upper left')
+
+    plt.subplot(3,1,3)
+    plt.plot(t_d,position_z_d,label='desired z position')
+    plt.plot(t_a,position_z_a,label='actual z position')
+    plt.title('z distance')
+    plt.xlabel('time')
+    plt.ylabel('distance')
+    plt.legend(loc='upper left')
+    
+    plt.show()
+
 if __name__ == '__main__':
-    plot_fig()
+    plot_base()
+    #plot_fig()

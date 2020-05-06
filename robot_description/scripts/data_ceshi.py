@@ -70,17 +70,24 @@ def main():
             print('R: '+str(R)+' P: '+str(P)+' Y: '+str(Y))
             print(data[4])
     '''
-    '''
+    
     cur_pose=Pose()
-    cur_pose.orientation.w=0.707
-    cur_pose.orientation.x=0.707
-    cur_pose.orientation.y=0
-    cur_pose.orientation.z=0
+    cur_pose.orientation.w=0.999999
+    cur_pose.orientation.x=-0.0000001
+    cur_pose.orientation.y=-0.00001
+    cur_pose.orientation.z=0.00004
+    R,P,Y=quaternion_to_euler(cur_pose.orientation)
+    print('R: '+str(R)+' P: '+str(P)+' Y: '+str(Y))
+    cur_pose.orientation.w=0.999177
+    cur_pose.orientation.x=0.000006
+    cur_pose.orientation.y=0.000006
+    cur_pose.orientation.z=-0.040567
     R,P,Y=quaternion_to_euler(cur_pose.orientation)
     print('R: '+str(R)+' P: '+str(P)+' Y: '+str(Y))
     '''
     o=euler_to_quaternion(0.5,1.0,0)
     print(str(o.w)+' '+str(o.x)+' '+str(o.y)+' '+str(o.z))
+    '''
     '''
     res=Pose()
     start_orientation=Quaternion(0,0,0.707,0.707)

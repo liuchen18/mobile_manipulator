@@ -1,4 +1,4 @@
-0505:
+#0505:
 
 work:
 rewrite the robot_description's ceshi.cpp, which can subscribe odom and manipulator controller state,and then use the control strategy
@@ -10,3 +10,16 @@ problems:
 the velocity of the base changes suddenly,which may cause the error of the end effector
 the joint position is larger than the max or smaller than min. need to find a better way to plan the base trajectory.
 
+#0506:
+
+work:
+found some problems that were not noticed,such as the transform from mm velocity to manipulator velocity. add the velocity casused by the rotation of the base
+changed the planner. add searching guidence according to the trajectory velocity
+tested the dwa algorithm and correct some errors. now it can work normally.
+added a fig that describes the dwa results
+
+problems:
+the dwa algorithm cannot follow the trajectory accurately,probably the goal function needs to be improved. or it is okay now,the errors can be ignored
+the manipulator will go to singularity when moving based the given control method. probably the highest manipulability point is closed to the singularity
+it need to be conformed.
+a new way to chose the point:according to the manipulability area,which can be described as the radius of the ball,not the manipulability directly

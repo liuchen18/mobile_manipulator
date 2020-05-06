@@ -88,7 +88,7 @@ class planner():
         self.theta_acc=0.2
         self.x_vel=1.0
         self.y_vel=1.0
-        self.theta_vel=0.0 #mobile base velocity and acceleration
+        self.theta_vel=0.5 #mobile base velocity and acceleration
         self.last_base_vel=Twist() # the velocity of the last time duration
         self.last_base_x=0
         self.last_base_y=0
@@ -105,7 +105,7 @@ class planner():
         '''
         desired_pose=Pose()
         desired_pose.position.x=0.2
-        desired_pose.position.y=time*0.1+0.3
+        desired_pose.position.y=time*0.2+0.3
         desired_pose.position.z=1.0
         desired_pose.orientation.x=0.707
         desired_pose.orientation.y=0.0
@@ -201,10 +201,13 @@ class planner():
                     x_dis=min_x_dis*x+min_x_d #this means the distance of the base moves along the direction
                     y_dis=min_y_dis*y+min_y_d
                     #print(y_dis)
-                    #theta_dis=min_theta_dis*theta+min_theta_d
-                    theta_dis=0.0 # this means theta_vel is always 0
+                    theta_dis=min_theta_dis*theta+min_theta_d
+                    #theta_dis=0.0 # this means theta_vel is always 0
                     global_x,global_y,global_theta=self.compute_current_base_posotion(x_dis,y_dis,theta_dis)
-                    #print(global_y)
+
+                    #this judgement guides the sampling dirction, canbe determined by the velocity of the trajectory
+                    if global_y < self.last_base_y:
+                        continue
 
                     #compute desired pose
                     d_pose=Pose()
