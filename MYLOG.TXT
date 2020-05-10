@@ -23,3 +23,18 @@ the dwa algorithm cannot follow the trajectory accurately,probably the goal func
 the manipulator will go to singularity when moving based the given control method. probably the highest manipulability point is closed to the singularity
 it need to be conformed.
 a new way to chose the point:according to the manipulability area,which can be described as the radius of the ball,not the manipulability directly
+
+#0509
+
+work:
+ rewrite the planner.py using the max area with good manipulability method,
+
+#0510:
+
+ work:
+ test the new planner,
+ came out a new method to plan the trajectory real time. like the dwa algorithm, sample in the velocity demain, predict the posible position and give a goal function to evaluate current sample result,find the best to pub
+ 
+
+ problems:
+ the new planner always focuse on the current best place, sometimes next position will have no ik solution,needs to be improved

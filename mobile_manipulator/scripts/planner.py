@@ -13,6 +13,7 @@ from geometry_msgs.msg import Twist
 import PyKDL as kdl
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from geometry_msgs.msg import Pose2D
 
 class manipulator():
     def __init__(self):
@@ -85,7 +86,7 @@ class planner():
         self.sim_time=30          #this means the total simulate time
         self.x_acc=0.5
         self.y_acc=0.5
-        self.theta_acc=0.2
+        self.theta_acc=0.5
         self.x_vel=1.0
         self.y_vel=1.0
         self.theta_vel=0.5 #mobile base velocity and acceleration
@@ -95,7 +96,7 @@ class planner():
         self.last_base_theta=0 #the position of the last time duration
         self.min_x_dis=0.01
         self.min_y_dis=0.01
-        self.min_theta_dis=0.02 #grid size
+        self.min_theta_dis=0.01 #grid size
         self.arm=manipulator()
         self.way_points=[]
 
@@ -179,7 +180,7 @@ class planner():
 
     def compute_max_mani_position(self,desired_pose):
         '''
-        according the posible area, compute the manipulability of all the posible position 
+        according the posible area, compute the manipulability of all the posible position and find the biggest manipulability
         '''
         max_info=[]
         max_manipulability=0
@@ -243,7 +244,7 @@ class planner():
         theta=self.last_base_theta+this_theta
         return x,y,theta
 
-    def plan_whole_trajectory(self):
+    def plan_whole_trajectory_max_mani(self):
         '''
         plan the whole trajectory,the base trajeacory is in self.way_points
         '''
@@ -265,6 +266,130 @@ class planner():
                 print('current_position:'+str(self.last_base_x)+' '+str(self.last_base_y)+' '+str(self.last_base_theta))
         with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory.txt','a') as f:
             f.write('Done!')
+    
+    def compute_biggest_mani_area(self,desired_mm_pose):
+        '''compute the manipulability of all positions and find the biggest area. return a float(area size) Pose2D and Twist
+        '''
+        #max and min global position for each demention
+        max_x_d,min_x_d,max_y_d,min_y_d,max_theta_d,min_theta_d=self.compute_position_area()
+
+        #compute the grid num
+        x_num,y_num,theta_num=self.compute_grid_num(max_x_d,min_x_d,max_y_d,min_y_d,max_theta_d,min_theta_d)
+        #print('x_num: '+str(x_num)+' y_num: '+str(y_num)+' theta_num: '+str(theta_num))
+
+        #grid size
+        min_x_dis=self.min_x_dis
+        min_y_dis=self.min_y_dis
+        min_theta_dis=self.min_theta_dis
+
+        #list to save each manipulability and grid position
+        manipulability_list=[[[0 for i in range(theta_num)] for j in range(y_num)] for k in range(x_num)]
+        manipulability_dp=[[[0 for i in range(theta_num)] for j in range(y_num)] for k in range(x_num)]
+
+        #to save the biggest size and grid position
+        max_area_size=0.0
+        max_position_x=0
+        max_position_y=0
+        max_position_theta=0
+
+        no_solution_point_num=0
+
+        #compute manipulability for every grid
+        for x in range(x_num):
+            for y in range(y_num):
+                for theta in range(theta_num):
+
+                    #current position for current grid in the base coordinate
+                    x_dis=min_x_dis*x+min_x_d
+                    y_dis=min_y_dis*y+min_y_d
+                    theta_dis=min_theta_dis*theta+min_theta_d
+
+                    #current position for current grid in the world coordinate
+                    global_x,global_y,global_theta=self.compute_current_base_posotion(x_dis,y_dis,theta_dis)
+
+                    #compute the desired pose of the manipulator when the base is in current grid
+                    d_pose=Pose()
+                    d_pose.position.x=desired_mm_pose.position.x-global_x
+                    d_pose.position.y=desired_mm_pose.position.y-global_y
+                    d_pose.position.z=desired_mm_pose.position.z
+                    desired_R,desired_P,desired_Y=self.quaternion_to_euler(desired_mm_pose.orientation)
+                    desired_Y-=global_theta
+                    d_pose.orientation=self.euler_to_quaternion(desired_R,desired_P,desired_Y)
+
+                    #compute the manipulability for current grid
+                    manipulability=self.arm.compute_manipulability(d_pose)
+
+                    if manipulability ==0:
+                        no_solution_point_num+=1
+
+                    #save current grid position and manipulability
+                    manipulability_list[x][y][theta]=manipulability
+
+                    #if manipulability is big enough, add it into dp list and data list
+                    if abs(manipulability) > 0.0003:
+                        if x==0 or y == 0 or theta == 0:
+                            manipulability_dp[x][y][theta]=1
+                        else:
+                            manipulability_dp[x][y][theta]=1.0+min(manipulability_dp[x-1][y][theta],manipulability_dp[x][y-1][theta],manipulability_dp[x][y][theta-1],
+                                                            manipulability_dp[x-1][y-1][theta],manipulability_dp[x][y-1][theta-1],manipulability_dp[x-1][y][theta-1],
+                                                            manipulability_dp[x-1][y-1][theta-1])
+                            if max_area_size < manipulability_dp[x][y][theta]:
+                                max_area_size=manipulability_dp[x][y][theta]
+                                max_position_x=x
+                                max_position_y=y
+                                max_position_theta=theta
+                    else:
+                        manipulability_dp[x][y][theta]=0
+        
+        print('no solution point num: '+str(no_solution_point_num) )
+
+        #compute global position and velocity
+        vel=Twist()
+        pos=Pose2D()
+        pos.x=min_x_dis*(float(max_position_x)-max_area_size/2)+min_x_d
+        pos.y=min_y_dis*(float(max_position_y)-max_area_size/2)+min_y_d
+        pos.theta=min_theta_dis*(float(max_position_theta)-max_area_size/2)+min_theta_d
+        vel.linear.x=pos.x/self.time_duration
+        vel.linear.y=pos.y/self.time_duration
+        vel.angular.z=pos.theta/self.time_duration
+        
+        return max_area_size,pos,vel
+    
+    def plan_whole_trajectory_biggest_area(self):
+        '''
+        plan the whole trajectory according to the manipulability area size,the base trajeacory is in self.way_points
+        '''
+        for t in range(int(self.sim_time/self.time_duration)):
+            desired_pose=self.desired_end_effector_pose(self.time_duration*t)
+            max_area_size,pos,vel=self.compute_biggest_mani_area(desired_pose)
+            if max_area_size == 0:
+                rospy.logerr('NO IK solution at time ' +str(t*self.time_duration))
+                exit()
+            else:
+                rospy.loginfo('max area size: '+str(max_area_size))
+                with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_area.txt','a') as f:
+                    f.write(str(pos.x)+' '+str(pos.y)+' '+str(pos.theta)+' '+str(t*self.time_duration)+'\r\n')
+                self.way_points.append([pos,t])
+                self.last_base_vel=vel
+                #print(self.last_base_vel)
+                self.last_base_x=pos.x
+                self.last_base_y=pos.y
+                self.last_base_theta=pos.theta
+                print('current_position:'+str(self.last_base_x)+' '+str(self.last_base_y)+' '+str(self.last_base_theta))
+        rospy.loginfo('the trajectory is finished!')
+
+    def plan_given_point_biggest_area(self,desired_pose):
+        '''
+        plan the given point according to the manipulability area size
+        '''     
+        max_area_size,pos,vel=self.compute_biggest_mani_area(desired_pose)
+        if max_area_size == 0:
+            rospy.logerr('NO IK solution ')
+            exit()
+        else:
+            rospy.loginfo('max area size: '+str(max_area_size))
+            print('current_position:'+str(self.last_base_x)+' '+str(self.last_base_y)+' '+str(self.last_base_theta))
+        rospy.loginfo('the trajectory is finished!')
 
 
 def main():
@@ -289,9 +414,11 @@ def main():
     current_planner=planner()
     rate=rospy.Rate(10)
     start_time=rospy.get_time()
-    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory.txt','w') as f:
-        f.write('base trajectory: x y theta manipulability time \r\n')
-    current_planner.plan_whole_trajectory()
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_area.txt','w') as f:
+        f.write('base trajectory: x y theta time \r\n')
+
+    #current_planner.plan_whole_trajectory_max_mani()
+    current_planner.plan_whole_trajectory_biggest_area()
 
 
 
