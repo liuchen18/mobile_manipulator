@@ -7,7 +7,7 @@ project(mobile_manipulator)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED roscpp geometry_msgs std_msgs nav_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -99,9 +99,9 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES mobile_manipulator
-#  CATKIN_DEPENDS other_catkin_pkg
+  INCLUDE_DIRS include
+#  LIBRARIES ur_description
+  CATKIN_DEPENDS roscpp geometry_msgs std_msgs nav_msgs
 #  DEPENDS system_lib
 )
 
@@ -112,14 +112,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-# ${catkin_INCLUDE_DIRS}
+include
+  ${catkin_INCLUDE_DIRS}
+include_directories("/usr/include/eigen3")
 )
-
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/mobile_manipulator.cpp
-# )
+add_library(MY_DWA
+  include/mobile_manipulator/base_vel_plan.h
+  src/base_vel_plan.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -200,3 +201,8 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+target_link_libraries(MY_DWA ${catkin_LIBRARIES})
+add_dependencies(MY_DWA ${${OROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(base_control src/base_control.cpp)
+target_link_libraries(base_control MY_DWA ${catkin_LIBRARIES})

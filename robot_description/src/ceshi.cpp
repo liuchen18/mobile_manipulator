@@ -2,7 +2,7 @@
 #define DEBUG_TIME
 //#define SHOW_BASE_STATE
 //#define DEBUG
-//#define DEBUG_POSITION_ERROR
+#define DEBUG_POSITION_ERROR
 #include "ros/ros.h"
 #include <Eigen/Dense>
 #include "control_msgs/FollowJointTrajectoryAction.h"
@@ -48,7 +48,7 @@ geometry_msgs::Pose trajectory::desired_trajectory_pose(double time){
     geometry_msgs::Pose d_pose;
     d_pose.position.x=0.2;
     d_pose.position.y=0.2*time + 0.3;
-    d_pose.position.z=1.0;
+    d_pose.position.z=1.2;
     d_pose.orientation.x=0.707;
     d_pose.orientation.y=0.0;
     d_pose.orientation.z=0.0;
@@ -124,7 +124,8 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
 
     #ifdef DEBUG_POSITION_ERROR
         ROS_INFO("position x error: %f ",position_error[0]);
-        ROS_INFO("desired x: %f, actual x: %f",desired_cartisian_pose.position.x,current_cartisian_pose.position.x);
+        //ROS_INFO("desired x: %f, actual x: %f",desired_cartisian_pose.position.x,current_cartisian_pose.position.x);
+        ROS_INFO("----------------------------------------------------------------------");
     #endif
     
     #ifdef DEBUG_CONTROL
@@ -193,6 +194,7 @@ geometry_msgs::Pose compute_desired_manipulator_end_pose(geometry_msgs::Pose des
         ROS_INFO("cartisian_x: %f, cartisian_y: %f",cartisian_x,cartisian_y);
         ROS_INFO("current theta: %f",current_base_position[2]);
         ROS_INFO("desired mani x: %f",desired_mani_end_pose.position.x);
+        ROS_INFO("****************************************************88");
     #endif
 
 
@@ -321,7 +323,7 @@ int main(int argc, char** argv){
     base_state current_base_state;
     ros::Subscriber base_sub = nh.subscribe("odom",1000,&base_state::base_Callback, &current_base_state);
     ros::Publisher start_base_pub = nh.advertise<std_msgs::Bool>("start_base", 1000);
-    
+    ros::Publisher manipulator_pose_pub = nh.advertise<geometry_msgs::Pose>("manipulator_state", 1000);
 
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> action_client("manipulator_controller/follow_joint_trajectory", true);
     ROS_INFO("waiting for server");
@@ -347,7 +349,7 @@ int main(int argc, char** argv){
     geometry_msgs::Pose init_pose;
     init_pose.position.x=0.2;
     init_pose.position.y=0.3;
-    init_pose.position.z=1.0;
+    init_pose.position.z=1.2;
     init_pose.orientation.x=0.707;
     init_pose.orientation.y=0;
     init_pose.orientation.z=0;
@@ -383,6 +385,7 @@ int main(int argc, char** argv){
         kinematic_state->setJointGroupPositions(joint_model_group,joint_v);
         const Eigen::Isometry3d& end_effector_state = kinematic_state->getGlobalLinkTransform("wrist_3_link");
         geometry_msgs::Pose current_end_effector_pose = Isometry_to_pose(end_effector_state);
+        manipulator_pose_pub.publish(current_end_effector_pose);
 
         out<<ros::Time::now().toSec()-start_time<<" "<<current_base_state.base_position[0]<<" "<<current_base_state.base_position[1]<<" "<<current_base_state.base_position[2]
             <<" "<<current_end_effector_pose.position.x<<" "<<current_end_effector_pose.position.y<<" "<<current_end_effector_pose.position.z

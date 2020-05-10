@@ -34,7 +34,9 @@ work:
  work:
  test the new planner,
  came out a new method to plan the trajectory real time. like the dwa algorithm, sample in the velocity demain, predict the posible position and give a goal function to evaluate current sample result,find the best to pub
- 
+ write the real time planning algorithm
+ combine the base control and manipulator control,tested them
 
  problems:
  the new planner always focuse on the current best place, sometimes next position will have no ik solution,needs to be improved
+ there are still some problems.

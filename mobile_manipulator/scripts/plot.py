@@ -98,5 +98,5 @@ def plot_base():
     plt.show()
 
 if __name__ == '__main__':
-    plot_base()
-    #plot_fig()
+    #plot_base()
+    plot_fig()

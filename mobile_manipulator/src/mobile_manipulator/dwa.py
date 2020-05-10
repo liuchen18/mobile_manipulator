@@ -19,7 +19,7 @@ class DWA:
         self.current_x, self.current_y, self.current_theta = init_pose
         # Parameters for prediction trajectory
         self.dt=0.1
-        self.vel_resolution=0.1
+        self.vel_resolution=0.01
         self.current_time=0.0
         self.point_delta_time=0.0
         self.x_position_o=[]
@@ -62,13 +62,13 @@ class DWA:
 
     def sample_velocity(self):
         '''this function sample velocity,return a list that contains all posible velocities'''
-        max_x=min(self.MAX_X_VEL,self.current_x_vel+self.MAX_X_ACC)
-        max_y=min(self.MAX_Y_VEL,self.current_y_vel+self.MAX_Y_ACC)
-        max_theta=min(self.MAX_THETA_VEL,self.current_theta_vel+self.MAX_THETA_ACC)
+        max_x=min(self.MAX_X_VEL,self.current_x_vel+self.MAX_X_ACC*self.dt)
+        max_y=min(self.MAX_Y_VEL,self.current_y_vel+self.MAX_Y_ACC*self.dt)
+        max_theta=min(self.MAX_THETA_VEL,self.current_theta_vel+self.MAX_THETA_ACC*self.dt)
 
-        min_x=max(-self.MAX_X_VEL,self.current_x_vel-self.MAX_X_ACC)
-        min_y=max(-self.MAX_Y_VEL,self.current_y_vel-self.MAX_Y_ACC)
-        min_theta=max(-self.MAX_THETA_VEL,self.current_theta_vel-self.MAX_THETA_ACC)
+        min_x=max(-self.MAX_X_VEL,self.current_x_vel-self.MAX_X_ACC*self.dt)
+        min_y=max(-self.MAX_Y_VEL,self.current_y_vel-self.MAX_Y_ACC*self.dt)
+        min_theta=max(-self.MAX_THETA_VEL,self.current_theta_vel-self.MAX_THETA_ACC*self.dt)
 
         sample_vel_result=[]
         for i in range(int((max_x-min_x)/self.vel_resolution)):
@@ -87,7 +87,7 @@ class DWA:
             delta_time=self.time_o[self.last_point_index+1]-self.current_time+i*self.point_delta_time
             #print('delta time: '+str(delta_time))
             pos_x,pos_y,pos_theta=self.predict_position(x_vel_posible,y_vel_posible,theta_vel_possible,delta_time)
-            point_bias+=(10*abs(point[i][0]-pos_x)+10*abs(point[i][1]-pos_y)+abs(point[i][2]-pos_theta))*1.0/delta_time
+            point_bias+=(abs(point[i][0]-pos_x)+abs(point[i][1]-pos_y)+abs(point[i][2]-pos_theta))*1.0/delta_time
 
         vel_bias=0.2*(abs(self.current_x_vel-x_vel_posible)+abs(self.current_y_vel-y_vel_posible)+abs(self.current_theta_vel-theta_vel_possible))
         
