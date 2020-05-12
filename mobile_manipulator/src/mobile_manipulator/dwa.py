@@ -18,7 +18,7 @@ class DWA:
         # Current positions
         self.current_x, self.current_y, self.current_theta = init_pose
         # Parameters for prediction trajectory
-        self.dt=0.1
+        self.dt=0.05
         self.vel_resolution=0.01
         self.current_time=0.0
         self.point_delta_time=0.0
@@ -31,13 +31,11 @@ class DWA:
 
     def read_data(self,file_path):
         with open(file_path,'r') as f:
-            for line in f.readlines()[1:]:
-                if line == 'Done!':
-                    break
-                self.x_position_o.append(float(line.split(' ')[0]))
-                self.y_position_o.append(float(line.split(' ')[1]))
-                self.theta_position_o.append(float(line.split(' ')[2]))
-                self.time_o.append(float(line.split(' ')[4]))
+            for line in f.readlines()[:]:
+                self.x_position_o.append(float(line.split(' ')[1]))
+                self.y_position_o.append(float(line.split(' ')[2]))
+                self.theta_position_o.append(float(line.split(' ')[3]))
+                self.time_o.append(float(line.split(' ')[0]))
         self.point_delta_time=self.time_o[1]-self.time_o[0]
 
     def state_update(self,time,vel_list,position_list):
@@ -70,6 +68,8 @@ class DWA:
         min_y=max(-self.MAX_Y_VEL,self.current_y_vel-self.MAX_Y_ACC*self.dt)
         min_theta=max(-self.MAX_THETA_VEL,self.current_theta_vel-self.MAX_THETA_ACC*self.dt)
 
+        #print('max x vel'+str(max_x)+' min x vel'+str(min_x))
+
         sample_vel_result=[]
         for i in range(int((max_x-min_x)/self.vel_resolution)):
             for j in range(int((max_y-min_y)/self.vel_resolution)):
@@ -81,15 +81,17 @@ class DWA:
         '''generate the goal func for every sampled velocity,return a float as goal func'''
         point=[]
         for i in range(point_num):
-            point.append(copy.deepcopy([self.x_position_o[self.last_point_index+1],self.y_position_o[self.last_point_index+1],self.theta_position_o[self.last_point_index+1]]))
+            point.append(copy.deepcopy([self.x_position_o[self.last_point_index+1+i],self.y_position_o[self.last_point_index+1+i],self.theta_position_o[self.last_point_index+1+i]]))
         point_bias=0.0
         for i in range(point_num):
             delta_time=self.time_o[self.last_point_index+1]-self.current_time+i*self.point_delta_time
             #print('delta time: '+str(delta_time))
             pos_x,pos_y,pos_theta=self.predict_position(x_vel_posible,y_vel_posible,theta_vel_possible,delta_time)
             point_bias+=(abs(point[i][0]-pos_x)+abs(point[i][1]-pos_y)+abs(point[i][2]-pos_theta))*1.0/delta_time
+            #if i==0:
+            #    print('current predicted error: x: '+str(abs(point[i][0]-pos_x))+' y: '+str(abs(point[i][1]-pos_y))+' theta: '+str(abs(point[i][2]-pos_theta)))
 
-        vel_bias=0.2*(abs(self.current_x_vel-x_vel_posible)+abs(self.current_y_vel-y_vel_posible)+abs(self.current_theta_vel-theta_vel_possible))
+        vel_bias=0#self.dt*0.5*(abs(self.current_x_vel-x_vel_posible)+abs(self.current_y_vel-y_vel_posible)+abs(self.current_theta_vel-theta_vel_possible))
         
         return vel_bias+point_bias
 
@@ -98,18 +100,26 @@ class DWA:
         if self.last_point_index>=len(self.x_position_o)-1:
             return 0,0,0
         vel_sample_res=self.sample_velocity()
+        print('sample num: '+str(len(vel_sample_res)))
         min_goal_func=float('inf')
         best_x_vel=0
         best_y_vel=0
         best_theta_vel=0
         for i in range(len(vel_sample_res)):
-            cur_goal_func=self.compute_goal_function(vel_sample_res[i][0],vel_sample_res[i][1],vel_sample_res[i][2],2)
+            cur_goal_func=self.compute_goal_function(vel_sample_res[i][0],vel_sample_res[i][1],vel_sample_res[i][2],3)
+            if i==0:
+                print('rand goal func: '+str(cur_goal_func))
             if cur_goal_func<min_goal_func:
                 min_goal_func=cur_goal_func
                 best_x_vel=vel_sample_res[i][0]
                 best_y_vel=vel_sample_res[i][1]
                 best_theta_vel=vel_sample_res[i][2]
         #print(min_goal_func)
+        print('min_goao func : '+str(min_goal_func))
+        delta_time=self.time_o[self.last_point_index+1]-self.current_time
+        pos_x,pos_y,pos_theta=self.predict_position(best_x_vel,best_y_vel,best_theta_vel,delta_time)
+        print('current x vel: '+str(self.current_x_vel)+' current y vel: '+str(self.current_y_vel)+' current theta vel: '+str(self.current_theta_vel))
+        print('current x :'+str(self.current_x)+ ' predicted x :'+str(pos_x)+' desired x :'+str(self.x_position_o[self.last_point_index+1]))
 
         return best_x_vel,best_y_vel,best_theta_vel
 

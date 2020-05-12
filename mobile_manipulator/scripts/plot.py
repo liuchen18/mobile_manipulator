@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 
-def plot_fig():
+def plot_end_effector():
     t=[]
     position_x=[]
     position_y=[]
@@ -47,7 +47,7 @@ def plot_fig():
     plt.show()
 
 
-def plot_base():
+def plot_base_position():
     t_d=[]
     position_x_d=[]
     position_y_d=[]
@@ -56,13 +56,17 @@ def plot_base():
     position_x_a=[]
     position_y_a=[]
     position_z_a=[]
-    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory.txt','r') as f:
-        for line in f.readlines()[1:-1]:
+    t_c=[]
+    position_x_c=[]
+    position_y_c=[]
+    position_z_c=[]
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_goal_func.txt','r') as f:
+        for line in f.readlines()[1:]:
             data=list(map(float,line.split(' ')))
-            position_x_d.append(data[0])
-            position_y_d.append(data[1])
-            position_z_d.append(data[2])
-            t_d.append(data[4])
+            position_x_d.append(data[1])
+            position_y_d.append(data[2])
+            position_z_d.append(data[3])
+            t_d.append(data[0])
     with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt','r') as f:
         for line in f.readlines()[1:]:
             data=list(map(float,line.split(' ')))
@@ -70,10 +74,18 @@ def plot_base():
             position_y_a.append(data[1])
             position_z_a.append(data[2])
             t_a.append(data[3])
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_recompute.txt','r') as f:
+        for line in f.readlines()[1:]:
+            data=list(map(float,line.split(' ')))
+            position_x_c.append(data[1])
+            position_y_c.append(data[2])
+            position_z_c.append(data[3])
+            t_c.append(data[0])
     plt.figure(12)
     plt.subplot(3,1,1)
     plt.plot(t_d,position_x_d,label='desired x position')
     plt.plot(t_a,position_x_a,label='actual x position')
+    plt.plot(t_c,position_x_c,label='recompute x position')
     plt.title('x distance')
     plt.xlabel('time')
     plt.ylabel('distance')
@@ -82,6 +94,7 @@ def plot_base():
     plt.subplot(3,1,2)
     plt.plot(t_d,position_y_d,label='desired y position')
     plt.plot(t_a,position_y_a,label='actual y position')
+    plt.plot(t_c,position_y_c,label='recompute y position')
     plt.title('y distance')
     plt.xlabel('time')
     plt.ylabel('distance')
@@ -90,6 +103,7 @@ def plot_base():
     plt.subplot(3,1,3)
     plt.plot(t_d,position_z_d,label='desired z position')
     plt.plot(t_a,position_z_a,label='actual z position')
+    plt.plot(t_c,position_z_c,label='recompute z position')
     plt.title('z distance')
     plt.xlabel('time')
     plt.ylabel('distance')
@@ -97,6 +111,58 @@ def plot_base():
     
     plt.show()
 
+def plot_base_velocity():
+    t_d=[]
+    velocity_x_d=[]
+    velocity_y_d=[]
+    velocity_z_d=[]
+    t_a=[]
+    velocity_x_a=[]
+    velocity_y_a=[]
+    velocity_z_a=[]
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_goal_func.txt','r') as f:
+        for line in f.readlines()[1:]:
+            data=list(map(float,line.split(' ')))
+            velocity_x_d.append(data[4])
+            velocity_y_d.append(data[5])
+            velocity_z_d.append(data[6])
+            t_d.append(data[0])
+    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt','r') as f:
+        for line in f.readlines()[1:]:
+            data=list(map(float,line.split(' ')))
+            t_a.append(data[3])
+            velocity_x_a.append(data[4])
+            velocity_y_a.append(data[5])
+            velocity_z_a.append(data[6])
+            
+    plt.figure(12)
+    plt.subplot(3,1,1)
+    plt.plot(t_d,velocity_x_d,label='desired x velocity')
+    plt.plot(t_a,velocity_x_a,label='actual x velocity')
+    plt.title('x velocity')
+    plt.xlabel('time')
+    plt.ylabel('velocity')
+    plt.legend(loc='upper left')
+
+    plt.subplot(3,1,2)
+    plt.plot(t_d,velocity_y_d,label='desired y velocity')
+    plt.plot(t_a,velocity_y_a,label='actual y velocity')
+    plt.title('y velocity')
+    plt.xlabel('time')
+    plt.ylabel('velocity')
+    plt.legend(loc='upper left')
+
+    plt.subplot(3,1,3)
+    plt.plot(t_d,velocity_z_d,label='desired z velocity')
+    plt.plot(t_a,velocity_z_a,label='actual z velocity')
+    plt.title('z velocity')
+    plt.xlabel('time')
+    plt.ylabel('velocity')
+    plt.legend(loc='upper left')
+    
+    plt.show()
+
 if __name__ == '__main__':
-    #plot_base()
-    plot_fig()
+    plot_base_position()
+    #plot_end_effector()
+    #plot_base_velocity()

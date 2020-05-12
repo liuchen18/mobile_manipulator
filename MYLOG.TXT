@@ -40,3 +40,18 @@ work:
  problems:
  the new planner always focuse on the current best place, sometimes next position will have no ik solution,needs to be improved
  there are still some problems.
+
+ 0511:
+
+ work:
+ add new planner: use a goal function to chose the best position. sample in velocity domain,predict the position
+
+ 0512:
+
+ work:
+ test the new planner.  improve the goal function
+ control the base to run the planned path and analysis the base result
+
+ problems:
+ error of the x direction is to large, need to be improved
+

@@ -48,7 +48,7 @@ geometry_msgs::Pose trajectory::desired_trajectory_pose(double time){
     geometry_msgs::Pose d_pose;
     d_pose.position.x=0.2;
     d_pose.position.y=0.2*time + 0.3;
-    d_pose.position.z=1.2;
+    d_pose.position.z=1;
     d_pose.orientation.x=0.707;
     d_pose.orientation.y=0.0;
     d_pose.orientation.z=0.0;

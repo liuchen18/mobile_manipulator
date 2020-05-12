@@ -392,6 +392,7 @@ class planner():
         rospy.loginfo('the trajectory is finished!')
 
 
+
 def main():
     eigenpy.switchToNumpyMatrix()
     rospy.init_node('planner')
