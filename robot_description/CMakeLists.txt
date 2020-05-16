@@ -138,7 +138,7 @@ include_directories("/usr/include/eigen3")
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-add_executable(ceshi src/ceshi.cpp)
-target_link_libraries(ceshi ${catkin_LIBRARIES})
+add_executable(mm_move src/mm_move.cpp)
+target_link_libraries(mm_move ${catkin_LIBRARIES})
 add_executable(temp src/temp.cpp)
 target_link_libraries(temp ${catkin_LIBRARIES})

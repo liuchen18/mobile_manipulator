@@ -18,12 +18,12 @@ def quaternion_to_euler(given_oriantation):
     return R,P,Y
 
 class base_control():
-    def __init__(self,k_x=1,k_y=1,k_theta=1):
+    def __init__(self,k_x=1.0,k_y=1.0,k_theta=3):
         self.base_state= Odometry()
         self.start_base=Bool()
         self.base_vel=[0,0,0]
         self.base_position=[0,0,0]
-        self.start_base=True
+        self.start_base=False
         self.k_x=k_x
         self.k_y=k_y
         self.k_theta=k_theta
@@ -48,8 +48,13 @@ class base_control():
 
         vel_ctrl_x=planned_velocity[0]*math.cos(orien_z_error)+self.k_x*pos_x_error
         vel_ctrl_y=planned_velocity[1]*math.cos(orien_z_error)+self.k_y*pos_y_error
-        delta=(-2*pos_x_error*planned_velocity[1]+2*pos_y_error*planned_velocity[0])/math.sqrt(pos_x_error*pos_x_error+pos_y_error*pos_y_error)
+
+        #print('computing y error:'+str(pos_y_error))
+        #print('computing y d vel:'+str(planned_velocity[1]*math.cos(orien_z_error))+' control :'+str(self.k_y*pos_y_error))
+
+        delta=(-2*pos_x_error*planned_velocity[1]+2*pos_y_error*planned_velocity[0])/math.sqrt(pos_x_error*pos_x_error+pos_y_error*pos_y_error+0.0001)
         vel_ctrl_theta=planned_velocity[2]+self.k_theta*math.sqrt(planned_velocity[0]**2+planned_velocity[1]**2)*math.sin(orien_z_error)+0.005*delta
+
         return vel_ctrl_x,vel_ctrl_y,vel_ctrl_theta
     
 def compute_position_error(desired_pose2d,current_base_position):
@@ -92,12 +97,19 @@ def main():
         r.sleep()
     rospy.loginfo('manipualtor initialized. start to move')
 
-    with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt','w') as f:
+    compute_path='/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_recompute.txt'
+    actual_trajectory_path='/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt'
+    error_path='/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_error.txt'
+
+
+    with open(actual_trajectory_path,'w') as f:
         f.write('base trajectory: x y theta time \r\n')
 
-    compute_path='/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/base_trajectory_recompute.txt'
     with open(compute_path,'w') as f:
         f.write('computed position trajectory'+'\r\n')
+
+    with open(error_path,'w') as f:
+        f.write('movement error of the base'+'\r\n')
 
     base_control_rate=int(1/(vel_tra[1][0]-vel_tra[0][0]))
     print('base control rate: '+str(base_control_rate))
@@ -108,31 +120,41 @@ def main():
     dt=vel_tra[1][0]-vel_tra[0][0]
 
     while not rospy.is_shutdown():
-        index+=1
         print('current_time:'+str(rospy.get_time()-start_time))
-
-        with open('/home/chen/ws_chen/src/mm_meta_pkg/mobile_manipulator/data/actual_base_trajectory.txt','a') as f:
-            f.write(str(base.base_position[0])+' '+str(base.base_position[1])+' '+str(base.base_position[2])+' '+str(rospy.get_time()-start_time)+
-                    ' '+str(base.base_vel[0])+' '+str(base.base_vel[1])+' '+str(base.base_vel[2])+'\r\n')
+        #print('current position: x: '+str(base.base_position[0])+' y: '+str(base.base_position[1])+' theta: '+str(base.base_position[2]))
+        #print('desired position: x: '+str(pos_tra[index][0])+' y: '+str(pos_tra[index][1])+' theta: '+str(pos_tra[index][2]))
 
         new_theta=base.base_position[2]+vel_tra[index][3]*dt
         new_x=base.base_position[0]+vel_tra[index][1]*dt*math.cos(base.base_position[2])-vel_tra[index][2]*dt*math.sin(base.base_position[2])
         new_y=base.base_position[1]+vel_tra[index][2]*dt*math.cos(base.base_position[2])+vel_tra[index][1]*dt*math.sin(base.base_position[2])
 
+        with open(actual_trajectory_path,'a') as f:
+            f.write(str(base.base_position[0])+' '+str(base.base_position[1])+' '+str(base.base_position[2])+' '+str(rospy.get_time()-start_time)+
+                    ' '+str(base.base_vel[0])+' '+str(base.base_vel[1])+' '+str(base.base_vel[2])+'\r\n')
+
         with open(compute_path,'a') as f:
             f.write(str(vel_tra[index][0])+' '+str(new_x)+' '+str(new_y)+' '+str(new_theta)+'\r\n')
+        
+        with open(error_path,'a') as f:
+            f.write(str(rospy.get_time()-start_time)+' '+str(pos_tra[index][0]-base.base_position[0])+' '+str(pos_tra[index][1]-base.base_position[1])+' '+
+                    str(pos_tra[index][2]-base.base_position[2])+' '+str(vel_tra[index][1]-base.base_vel[0])+' '+str(vel_tra[index][2]-base.base_vel[1])+
+                    ' '+str(vel_tra[index][3]-base.base_vel[2])+'\r\n')
 
-        #x_err,y_err,theta_err=compute_position_error(pos_tra[index],base.base_position)
+        x_err,y_err,theta_err=compute_position_error(pos_tra[index],base.base_position)
+
+        print('x err: '+str(x_err)+' y err: '+ str(y_err)+' theta err: '+str(theta_err))
 
         #print('x_err: '+str(x_err)+' y_err: '+str(y_err)+' theta_err: '+str(theta_err))
 
         vel=Twist()
-        #vel.linear.x,vel.linear.y,vel.angular.z=base.kinematic_control(vel_tra[index][1:],x_err,y_vel,theta_err)
-        vel.linear.x,vel.linear.y,vel.angular.z=vel_tra[index][1:]
-        print('current x: '+str(base.base_position[0])+' desired x: '+str(pos_tra[index][0]))
+        vel.linear.x,vel.linear.y,vel.angular.z=base.kinematic_control(vel_tra[index+1][1:],x_err,y_err,theta_err)
+        #vel.linear.x,vel.linear.y,vel.angular.z=vel_tra[index+1][1:]
+        #vel.angular.z+=2*math.sin(pos_tra[index][2]-base.base_position[2])
+
+        print('desired y vel: '+str(vel_tra[index+1][2])+' actual control y vel:'+str(vel.linear.y))
 
         vel_pub.publish(vel)
-
+        index+=1
         rate.sleep()
 
 if __name__ == '__main__':

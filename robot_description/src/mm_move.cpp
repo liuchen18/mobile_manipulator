@@ -2,7 +2,8 @@
 #define DEBUG_TIME
 //#define SHOW_BASE_STATE
 //#define DEBUG
-#define DEBUG_POSITION_ERROR
+//#define DEBUG_POSITION_ERROR
+#define DEBUG_ORIENTATION_ERROR
 #include "ros/ros.h"
 #include <Eigen/Dense>
 #include "control_msgs/FollowJointTrajectoryAction.h"
@@ -111,7 +112,7 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
                                             const geometry_msgs::Pose& current_cartisian_pose,
                                             const geometry_msgs::Pose& desired_cartisian_pose,
                                             const Eigen::MatrixXd& jacobian){
-    double K[6]={1,1,1,1,1,1};
+    double K[6]={10,10,2,2,2,10};
 
     //generate error
     Eigen::Vector3d position_error;
@@ -125,7 +126,7 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
     #ifdef DEBUG_POSITION_ERROR
         ROS_INFO("position x error: %f ",position_error[0]);
         //ROS_INFO("desired x: %f, actual x: %f",desired_cartisian_pose.position.x,current_cartisian_pose.position.x);
-        ROS_INFO("----------------------------------------------------------------------");
+        ROS_INFO(" ");
     #endif
     
     #ifdef DEBUG_CONTROL
@@ -144,6 +145,13 @@ std::vector<double> compute_joint_velocity(const std::vector<double>& desired_ca
     for(int i=0;i<3;i++){
         cartisian_velocity(i+3,0)=K[i+3]*orientation_error[i]+desired_cartisian_vel[i+3];
     }
+
+    #ifdef DEBUG_ORIENTATION_ERROR
+        ROS_INFO("current orientation error: R: %f, P: %f, Y: %f",orientation_error[0],orientation_error[1],orientation_error[2]);
+        ROS_INFO("desired cartisian velocity: R: %f, P: %f, Y: %f",desired_cartisian_vel[3],desired_cartisian_vel[4],desired_cartisian_vel[5]);
+        ROS_INFO("computed cartisian velocity: R: %f, P: %f, Y: %f",cartisian_velocity(3,0),cartisian_velocity(4,0),cartisian_velocity(5,0));
+        ROS_INFO(" ");
+    #endif
 
     //compute joint velocity
     Eigen::Matrix<double,6,1> velocity=jacobian.inverse()*cartisian_velocity;
@@ -167,8 +175,12 @@ std::vector<double> compute_desired_manipulator_cartisian_velocity(const geometr
     double R=sqrt(current_end_effector_pose.position.x*current_end_effector_pose.position.x+current_end_effector_pose.position.y*current_end_effector_pose.position.y);
     double alpha = atan2(current_end_effector_pose.position.y,current_end_effector_pose.position.x);
     double theta = current_base_position[2];
-    desired_manipulator_cartisian_velocity[0]-=(current_base_velocity[0]-current_base_velocity[2]*R*sin(alpha+theta));
-    desired_manipulator_cartisian_velocity[1]-=(current_base_velocity[1]+current_base_velocity[2]*R*cos(alpha+theta));
+
+    desired_manipulator_cartisian_velocity[0]=desired_mm_cartiian_velocity[0]*cos(theta)+desired_mm_cartiian_velocity[1]*sin(theta);
+    desired_manipulator_cartisian_velocity[1]=-desired_mm_cartiian_velocity[0]*sin(theta)+desired_mm_cartiian_velocity[1]*cos(theta);
+
+    desired_manipulator_cartisian_velocity[0]-=(current_base_velocity[0]-current_base_velocity[2]*R*sin(alpha));
+    desired_manipulator_cartisian_velocity[1]-=(current_base_velocity[1]+current_base_velocity[2]*R*cos(alpha));
     desired_manipulator_cartisian_velocity[5]-=current_base_velocity[2];
     #ifdef DEBUG_VEL
         ROS_INFO("mm cartisian velocity: X: %f, Y: %f, theta: %f",desired_mm_cartiian_velocity[0],desired_mm_cartiian_velocity[1],desired_mm_cartiian_velocity[5]);
@@ -349,7 +361,7 @@ int main(int argc, char** argv){
     geometry_msgs::Pose init_pose;
     init_pose.position.x=0.2;
     init_pose.position.y=0.3;
-    init_pose.position.z=1.2;
+    init_pose.position.z=1;
     init_pose.orientation.x=0.707;
     init_pose.orientation.y=0;
     init_pose.orientation.z=0;
@@ -386,6 +398,7 @@ int main(int argc, char** argv){
         const Eigen::Isometry3d& end_effector_state = kinematic_state->getGlobalLinkTransform("wrist_3_link");
         geometry_msgs::Pose current_end_effector_pose = Isometry_to_pose(end_effector_state);
         manipulator_pose_pub.publish(current_end_effector_pose);
+
 
         out<<ros::Time::now().toSec()-start_time<<" "<<current_base_state.base_position[0]<<" "<<current_base_state.base_position[1]<<" "<<current_base_state.base_position[2]
             <<" "<<current_end_effector_pose.position.x<<" "<<current_end_effector_pose.position.y<<" "<<current_end_effector_pose.position.z
