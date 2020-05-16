@@ -55,3 +55,11 @@ work:
  problems:
  error of the x direction is to large, need to be improved
 
+ 0516:
+ work:
+ check the controller and find some problems and correct them
+
+ problems:
+ the desired manipulator cartisian velocity only concerns the current base velocity. but the current base velocity is always changing,which means the manipulator is always late for the desired trajectory.
+ probably the acceleration of the base should be considered
+
